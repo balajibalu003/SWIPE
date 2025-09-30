@@ -45,6 +45,7 @@ export interface InterviewProgress {
 		timeTakenSec: number
 	}>
 	chatHistory: ChatMessage[]
+	questionStartedAt: number | null
 }
 
 export interface InterviewSessionState {
