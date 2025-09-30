@@ -1,35 +1,54 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Tabs, Layout, theme } from 'antd'
+import { useEffect, useMemo } from 'react'
+import { useLocation, useNavigate, Outlet, Routes, Route, Navigate } from 'react-router-dom'
+import IntervieweeChat from './pages/IntervieweeChat'
+import InterviewerDashboard from './pages/InterviewerDashboard'
+
+const { Header, Content, Footer } = Layout
 
 function App() {
-  const [count, setCount] = useState(0)
+	const location = useLocation()
+	const navigate = useNavigate()
+	const {
+		token: { colorBgContainer }
+	} = theme.useToken()
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+	const activeKey = useMemo(() => {
+		if (location.pathname.startsWith('/interviewer')) return 'interviewer'
+		return 'interviewee'
+	}, [location.pathname])
+
+	useEffect(() => {
+		// Keep unknown paths redirected to interviewee
+		if (location.pathname === '/') {
+			navigate('/interviewee', { replace: true })
+		}
+	}, [location.pathname, navigate])
+
+	return (
+		<Layout style={{ minHeight: '100vh' }}>
+			<Header style={{ background: colorBgContainer }}>
+				<Tabs
+					activeKey={activeKey}
+					onChange={(key) => {
+						navigate(key === 'interviewer' ? '/interviewer' : '/interviewee')
+					}}
+					items={[
+						{ key: 'interviewee', label: 'Interviewee' },
+						{ key: 'interviewer', label: 'Interviewer' }
+					]}
+				/>
+			</Header>
+			<Content>
+				<Routes>
+					<Route path="/interviewee" element={<IntervieweeChat />} />
+					<Route path="/interviewer" element={<InterviewerDashboard />} />
+					<Route path="*" element={<Navigate to="/interviewee" replace />} />
+				</Routes>
+			</Content>
+			<Footer style={{ textAlign: 'center' }}>Swipe Interview Assistant</Footer>
+		</Layout>
+	)
 }
 
 export default App
