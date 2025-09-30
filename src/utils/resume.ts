@@ -66,8 +66,7 @@ export function parseProfileFromText(text: string): ParsedProfile {
 
 	// Heuristic for name: take first non-empty line without email/phone and not common headings
 	const lines = text
-		.split(/\r?\n|
-\s{2,}/)
+		.split(/\r?\n|\s{2,}/)
 		.map(l => l.trim())
 		.filter(Boolean)
 	const skipWords = ['resume', 'curriculum vitae', 'cv', 'profile']
