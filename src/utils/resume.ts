@@ -1,4 +1,4 @@
-import { parse as parseXml } from 'fast-xml-parser'
+import { XMLParser } from 'fast-xml-parser'
 import JSZip from 'jszip'
 import * as pdfjsLib from 'pdfjs-dist'
 import type { CandidateProfile } from '../types'
@@ -32,7 +32,8 @@ export async function extractTextFromDocx(file: File): Promise<string> {
 	const zip = await JSZip.loadAsync(arrayBuffer)
 	const documentXml = await zip.file('word/document.xml')?.async('string')
 	if (!documentXml) return ''
-	const json = parseXml(documentXml, { ignoreAttributes: false }) as any
+	const parser = new XMLParser({ ignoreAttributes: false })
+	const json = parser.parse(documentXml) as any
 	// Flatten text from w:t nodes
 	const texts: string[] = []
 	function walk(node: any) {
