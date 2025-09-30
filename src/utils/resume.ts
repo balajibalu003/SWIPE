@@ -3,15 +3,17 @@ import JSZip from 'jszip'
 import * as pdfjsLib from 'pdfjs-dist'
 import type { CandidateProfile } from '../types'
 
-// pdfjs worker will be loaded via CDN at runtime if not bundled; but for Vite we can set it like this
-// @ts-ignore - types may not include GlobalWorkerOptions
-// eslint-disable-next-line
-;(pdfjsLib as any).GlobalWorkerOptions.workerSrc =
-	// @ts-ignore
-	(pdfjsLib as any).GlobalWorkerOptions.workerSrc ||
-		'//cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.149/pdf.worker.min.js'
+// Worker config is set lazily within extractTextFromPdf to avoid module-load side effects
 
 export async function extractTextFromPdf(file: File): Promise<string> {
+	// Ensure worker configured (idempotent)
+	try {
+		// @ts-ignore
+		if (!(pdfjsLib as any).GlobalWorkerOptions.workerSrc) {
+			// @ts-ignore
+			(pdfjsLib as any).GlobalWorkerOptions.workerSrc = '//cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.149/pdf.worker.min.js'
+		}
+	} catch {}
 	const arrayBuffer = await file.arrayBuffer()
 	// @ts-ignore
 	const pdf = await (pdfjsLib as any).getDocument({ data: arrayBuffer }).promise
