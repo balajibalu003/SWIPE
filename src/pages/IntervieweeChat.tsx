@@ -1,16 +1,17 @@
-import { Typography, Upload, message, Form, Input, Button, Space, Card, Alert, Progress } from 'antd'
+import { Typography, Upload, message, Form, Input, Button, Space, Card, Alert, Progress, Result } from 'antd'
 import { InboxOutlined } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { extractResumeText, parseProfileFromText } from '../utils/resume'
 import { useAppDispatch, useAppSelector } from '../hooks'
-import { setActiveCandidate, startInterview, updateProgress } from '../store/sessionSlice'
+import { setActiveCandidate, startInterview, updateProgress, resetSession } from '../store/sessionSlice'
 import { generateQuestions, scoreAnswer, calculateFinalScore, summarizeCandidate } from '../utils/interview'
 import { v4 as uuid } from 'uuid'
-import { useDispatch } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import { upsertCandidate } from '../store/candidatesSlice'
 
 export default function IntervieweeChat() {
 	const dispatch = useAppDispatch()
+	const navigate = useNavigate()
 	const active = useAppSelector(s => s.session.activeCandidate)
 	const [loading, setLoading] = useState(false)
 	const [form] = Form.useForm()
@@ -65,6 +66,7 @@ export default function IntervieweeChat() {
 	const [answer, setAnswer] = useState('')
 	const activeQuestion = useMemo(() => session?.questions[session.currentIndex ?? 0], [session])
 	const secondsLeft = useCountdown(session?.questionStartedAt ?? null, activeQuestion?.secondsAllowed ?? 0)
+	const isCompleted = !!session?.completedAt
 
 	useEffect(() => {
 		if (!session || !activeQuestion) return
@@ -90,7 +92,7 @@ export default function IntervieweeChat() {
 		if (!session || !activeQuestion) return
 		const end = Date.now()
 		const timeTaken = Math.floor(((end) - (session.questionStartedAt ?? end)) / 1000)
-		const score = scoreAnswer(answer, activeQuestion.difficulty, timeTaken, activeQuestion.secondsAllowed)
+		// score is recalculated per question below when persisting results
 		const answers = [
 			...session.answers,
 			{ questionId: activeQuestion.id, answerText: answer, submittedAt: end, timeTakenSec: timeTaken }
@@ -163,14 +165,30 @@ export default function IntervieweeChat() {
 			{!session && (
 				<Card title="Your Details">
 					<Form form={form} layout="vertical" disabled={loading} initialValues={{ name: active?.name, email: active?.email, phone: active?.phone }}>
-						<Form.Item label="Name" name="name" rules={[{ required: true, message: 'Name is required' }]}>
+						<Form.Item
+							label="Name"
+							name="name"
+							rules={[
+								{ required: true, message: 'Name is required' },
+								{ min: 2, message: 'Name must be at least 2 characters' },
+								{ pattern: /^[A-Za-z][A-Za-z .'-]{1,58}$/, message: 'Use letters, spaces, dot, hyphen, apostrophe' }
+							]}
+						>
 							<Input placeholder="Full name" allowClear />
 						</Form.Item>
 						<Form.Item label="Email" name="email" rules={[{ required: true, type: 'email', message: 'Valid email required' }]}>
 							<Input placeholder="you@example.com" allowClear />
 						</Form.Item>
-						<Form.Item label="Phone" name="phone" rules={[{ required: true, message: 'Phone is required' }]}>
-							<Input placeholder="Phone number" allowClear />
+						<Form.Item
+							label="Phone"
+							name="phone"
+							getValueFromEvent={(e) => (e?.target?.value ?? '').replace(/\D/g, '').slice(0, 10)}
+							rules={[
+								{ required: true, message: 'Phone is required' },
+								{ pattern: /^\d{10}$/, message: 'Enter a 10-digit phone number' }
+							]}
+						>
+							<Input placeholder="10-digit phone number" allowClear inputMode="numeric" maxLength={10} />
 						</Form.Item>
 						<Space>
 							<Button type="primary" onClick={onSubmit} loading={loading}>Save & Continue</Button>
@@ -179,7 +197,7 @@ export default function IntervieweeChat() {
 				</Card>
 			)}
 
-			{session && activeQuestion && (
+			{session && activeQuestion && !isCompleted && (
 				<Card title={`Question ${session.currentIndex + 1} of ${session.questions.length} — ${activeQuestion.difficulty.toUpperCase()}`}>
 					<Alert type="info" showIcon message={activeQuestion.text} style={{ marginBottom: 12 }} />
 					<Progress percent={Math.round((secondsLeft / activeQuestion.secondsAllowed) * 100)} showInfo format={() => `${secondsLeft}s left`} />
@@ -191,6 +209,22 @@ export default function IntervieweeChat() {
 							<Button type="primary" onClick={submitAnswer}>Submit</Button>
 						</Space>
 					</Form>
+				</Card>
+			)}
+
+			{session && isCompleted && (
+				<Card>
+					<Result
+						status="success"
+						title="Interview completed!"
+						subTitle="Your responses have been recorded. View your final score and summary on the Interviewer tab."
+						extra={
+							<Space>
+								<Button type="primary" onClick={() => navigate('/interviewer')}>View Results</Button>
+								<Button onClick={() => { dispatch(resetSession()); navigate('/interviewee') }}>Start Over</Button>
+							</Space>
+						}
+					/>
 				</Card>
 			)}
 		</div>
