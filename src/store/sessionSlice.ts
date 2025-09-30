@@ -27,10 +27,16 @@ const sessionSlice = createSlice({
 		resumeInterview(state) {
 			state.pausedAt = null
 		}
+		,
+		resetSession(state) {
+			state.activeCandidate = null
+			state.progress = null
+			state.pausedAt = null
+		}
 	}
 })
 
-export const { setActiveCandidate, startInterview, updateProgress, pauseInterview, resumeInterview } = sessionSlice.actions
+export const { setActiveCandidate, startInterview, updateProgress, pauseInterview, resumeInterview, resetSession } = sessionSlice.actions
 export default sessionSlice.reducer
 
 

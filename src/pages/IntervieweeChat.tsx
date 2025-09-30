@@ -6,6 +6,8 @@ import { useAppDispatch, useAppSelector } from '../hooks'
 import { setActiveCandidate, startInterview, updateProgress } from '../store/sessionSlice'
 import { generateQuestions, scoreAnswer, calculateFinalScore, summarizeCandidate } from '../utils/interview'
 import { v4 as uuid } from 'uuid'
+import { useDispatch } from 'react-redux'
+import { upsertCandidate } from '../store/candidatesSlice'
 
 export default function IntervieweeChat() {
 	const dispatch = useAppDispatch()
@@ -105,6 +107,29 @@ export default function IntervieweeChat() {
 					{ id: uuid(), role: 'assistant', text: 'Interview completed. Thank you!', timestamp: end }
 				],
 				questionStartedAt: null
+			}))
+			// compute score and store candidate result
+			const perQuestionScores = answers.map(a => {
+				const q = session.questions.find(q => q.id === a.questionId)!
+				return scoreAnswer(a.answerText, q.difficulty, a.timeTakenSec, q.secondsAllowed)
+			})
+			const total = calculateFinalScore(perQuestionScores)
+			const profile = active!
+			const summary = summarizeCandidate(profile.name, total)
+			dispatch(upsertCandidate({
+				id: profile.id,
+				name: profile.name,
+				email: profile.email,
+				phone: profile.phone,
+				score: total,
+				summary,
+				chatHistory: session.chatHistory,
+				qa: answers.map(a => ({
+					question: session.questions.find(q => q.id === a.questionId)!,
+					answerText: a.answerText,
+					score: scoreAnswer(a.answerText, session.questions.find(q => q.id === a.questionId)!.difficulty, a.timeTakenSec, session.questions.find(q => q.id === a.questionId)!.secondsAllowed),
+					timeTakenSec: a.timeTakenSec
+				}))
 			}))
 			message.success('Interview completed')
 			setAnswer('')

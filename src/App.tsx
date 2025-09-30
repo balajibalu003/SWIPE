@@ -1,8 +1,9 @@
 import { Tabs, Layout, theme } from 'antd'
 import { useEffect, useMemo } from 'react'
-import { useLocation, useNavigate, Outlet, Routes, Route, Navigate } from 'react-router-dom'
+import { useLocation, useNavigate, Routes, Route, Navigate } from 'react-router-dom'
 import IntervieweeChat from './pages/IntervieweeChat'
 import InterviewerDashboard from './pages/InterviewerDashboard'
+import WelcomeBackModal from './components/WelcomeBackModal'
 
 const { Header, Content, Footer } = Layout
 
@@ -40,6 +41,7 @@ function App() {
 				/>
 			</Header>
 			<Content>
+				<WelcomeBackModal />
 				<Routes>
 					<Route path="/interviewee" element={<IntervieweeChat />} />
 					<Route path="/interviewer" element={<InterviewerDashboard />} />
